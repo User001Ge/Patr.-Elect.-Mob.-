@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ka">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>არჩევნების სიმულატორი</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KYYG5Z6S5Z"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', 'G-KYYG5Z6S5Z');
+    </script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Mobile-first frontend</p>
+          <h1>საპატრიარქო არჩევნების სიმულატორი</h1>
+          <p class="hero-text">
+            პირველ სამუშაო ვერსიაში შეგიძლია აირჩიო 3 კანდიდატი, გაუშვა სიმულაცია და მობილურიდანვე
+            ნახო პირველი ტური, მეორე ტური, Monte Carlo და პრეფერენციების მატრიცა.
+          </p>
+        </div>
+        <div class="status-pill hidden" id="status-pill">სისტემის შემოწმება...</div>
+      </header>
+
+      <main class="page-grid">
+        <section class="card hidden" aria-labelledby="model-title">
+          <div class="section-head">
+            <div>
+              <h2 id="model-title">მოდელის მიმოხილვა</h2>
+              <p class="muted">ეს ინფორმაცია პირდაპირ backend-იდან მოდის.</p>
+            </div>
+            <button class="ghost-btn" id="refresh-model-btn" type="button">განახლება</button>
+          </div>
+
+          <div class="stats-grid" id="model-stats">
+            <div class="stat-box"><span>კანდიდატები</span><strong>—</strong></div>
+            <div class="stat-box"><span>ამომრჩევლები</span><strong>—</strong></div>
+            <div class="stat-box"><span>ფაილი</span><strong>—</strong></div>
+          </div>
+
+          <div>
+            <p class="sub-label">კანდიდატების სრული სია</p>
+            <div class="chip-wrap" id="candidate-chip-list"></div>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="form-title">
+          <div class="section-head compact-gap">
+            <div>
+              <h2 id="form-title">სიმულაციის გაშვება</h2>
+              <p class="muted">აირჩიე ზუსტად 3 განსხვავებული კანდიდატი.</p>
+            </div>
+          </div>
+
+          <form id="simulation-form" class="form-grid">
+            <div class="form-group">
+              <label for="candidate-1">კანდიდატი 1</label>
+              <select id="candidate-1" required></select>
+            </div>
+            <div class="form-group">
+              <label for="candidate-2">კანდიდატი 2</label>
+              <select id="candidate-2" required></select>
+            </div>
+            <div class="form-group">
+              <label for="candidate-3">კანდიდატი 3</label>
+              <select id="candidate-3" required></select>
+            </div>
+
+            <div class="form-group">
+              <label for="iterations">იტერაციები</label>
+              <input id="iterations" type="number" min="1" max="200000" value="100" />
+            </div>
+
+            <div class="form-group">
+              <div class="label-row">
+                <label for="volatility">რყევადობის დონე</label>
+                <strong id="volatility-value">3</strong>
+              </div>
+              <input id="volatility" type="range" min="0" max="10" value="3" />
+            </div>
+
+            <div class="form-group">
+              <div class="label-row">
+                <label for="elector-absence">ამომრჩევლის გაცდენა (%)</label>
+                <strong id="elector-absence-value">5</strong>
+              </div>
+              <input id="elector-absence" type="range" min="0" max="100" value="5" />
+            </div>
+
+            <div class="form-group">
+              <div class="label-row">
+                <label for="candidate-absence">კანდიდატის გაცდენა (%)</label>
+                <strong id="candidate-absence-value">0</strong>
+              </div>
+              <input id="candidate-absence" type="range" min="0" max="100" value="0" />
+            </div>
+
+            <div class="form-group">
+              <label for="rng-seed">Seed (სურვილისამებრ)</label>
+              <input id="rng-seed" type="number" inputmode="numeric" placeholder="მაგ: 123" />
+            </div>
+
+            <div class="form-note" id="form-note">
+              backend ავტომატურად კითხულობს <code>data/preferences.xlsx</code> ფაილს.
+            </div>
+
+            <button class="primary-btn" id="submit-btn" type="submit">სიმულაციის გაშვება</button>
+          </form>
+        </section>
+
+        <section class="card hidden" id="error-card" aria-live="assertive">
+          <div class="section-head compact-gap">
+            <h2>შეცდომა</h2>
+          </div>
+          <p id="error-message" class="error-text"></p>
+        </section>
+
+        <section class="results-stack hidden" id="results-section">
+          <article class="card winner-card">
+            <div class="section-head compact-gap">
+              <div>
+                <p class="eyebrow green">საბოლოო შედეგი</p>
+                <h2 id="winner-name">—</h2>
+                <p class="muted" id="winner-note">—</p>
+              </div>
+            </div>
+            <div class="stats-grid" id="summary-stats"></div>
+            <div class="list-line"><span>გაცდენილი კანდიდატები</span><strong id="absent-candidates">არავინ</strong></div>
+          </article>
+
+          <article class="card">
+            <div class="section-head">
+              <div>
+                <h2>პირველი ტური</h2>
+                <p class="muted" id="first-round-meta">—</p>
+              </div>
+            </div>
+            <div class="bar-list" id="first-round-bars"></div>
+            <details class="details-block">
+              <summary>პირველი ტურის სრული ცხრილი</summary>
+              <div class="table-wrap" id="first-round-table-wrap"></div>
+            </details>
+          </article>
+
+          <article class="card" id="runoff-card">
+            <div class="section-head">
+              <div>
+                <h2>მეორე ტური</h2>
+                <p class="muted" id="runoff-meta">—</p>
+              </div>
+            </div>
+            <div class="bar-list" id="runoff-bars"></div>
+            <details class="details-block">
+              <summary>მეორე ტურის სრული ცხრილი</summary>
+              <div class="table-wrap" id="runoff-table-wrap"></div>
+            </details>
+          </article>
+
+          <article class="card">
+            <div class="section-head">
+              <div>
+                <h2>საბოლოო გამარჯვების ალბათობები</h2>
+                <p class="muted" id="monte-carlo-meta">—</p>
+              </div>
+            </div>
+            <div class="bar-list" id="probability-bars"></div>
+            <div class="stats-grid" id="mc-stats"></div>
+
+            <details class="details-block">
+              <summary>პირველი ტურის გამარჯვების სიხშირე</summary>
+              <div class="table-wrap" id="first-round-win-wrap"></div>
+            </details>
+
+            <details class="details-block">
+              <summary>საშუალო ხმები და მეორე ტურში გასვლა</summary>
+              <div class="table-wrap" id="average-votes-wrap"></div>
+            </details>
+          </article>
+
+          <article class="card">
+            <div class="section-head">
+              <div>
+                <h2>პრეფერენციების მატრიცა</h2>
+                <p class="muted">სრული მონაცემები Excel-იდან</p>
+              </div>
+            </div>
+            <details class="details-block">
+              <summary>ცხრილის გახსნა</summary>
+              <div class="table-wrap" id="preference-matrix-wrap"></div>
+            </details>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
